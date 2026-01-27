@@ -158,3 +158,40 @@
     @apply bg-gradient-to-r from-[hsl(262,83%,58%)] to-[hsl(262,54%,55%)] bg-clip-text text-transparent;
   }
 }
+
+/* Custom Scrollbar Styling - Hide Default Scrollbar */
+@layer base {
+  /* For Webkit browsers (Chrome, Safari, Edge) */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+
+  /* Optional: Custom thin scrollbar (uncomment if you want a custom styled scrollbar) */
+  /*
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+  */
+}

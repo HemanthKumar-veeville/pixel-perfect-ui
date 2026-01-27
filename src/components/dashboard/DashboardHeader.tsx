@@ -15,7 +15,7 @@ export function DashboardHeader() {
       <p className="text-sm text-muted-foreground mb-1">{formattedDate}</p>
       <h1 className="text-3xl font-bold mb-6">
         Good morning,{" "}
-        <span className="gradient-text">Sarah</span> 👋
+        <span className="gradient-text">Karthik</span> 👋
       </h1>
 
       <div className="flex flex-wrap gap-3">

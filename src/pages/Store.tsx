@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ComingSoonHero } from "@/components/ui/coming-soon-hero";
 
-const Index = () => {
+const StorePage = () => {
   return (
     <DashboardLayout>
       <ComingSoonHero />
@@ -9,4 +9,5 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default StorePage;
+
