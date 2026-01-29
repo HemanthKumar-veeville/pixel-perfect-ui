@@ -19,6 +19,7 @@ import CreditsDetail from "./pages/CreditsDetail";
 import Customers from "./pages/Customers";
 import Products from "./pages/Products";
 import Store from "./pages/Store";
+import Tickets from "./pages/Tickets";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Products />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tickets"
+            element={
+              <ProtectedRoute>
+                <Tickets />
               </ProtectedRoute>
             }
           />

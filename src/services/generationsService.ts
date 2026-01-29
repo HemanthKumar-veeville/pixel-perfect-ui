@@ -43,7 +43,18 @@ export const generationsService = {
     try {
       const response = await axiosInstance.get<VideoGenerationsResponse>(url);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle 404 gracefully - endpoint may not exist
+      if (error?.response?.status === 404 || error?.status === 404) {
+        // Return a structured error that can be handled by the slice
+        throw {
+          status: "error",
+          error: {
+            code: "NOT_FOUND",
+            message: "Video generations endpoint not found",
+          },
+        } as ApiError;
+      }
       throw error as ApiError;
     }
   },

@@ -141,6 +141,7 @@ const Register = () => {
                     aria-invalid={errors.name ? "true" : "false"}
                     aria-describedby={errors.name ? "name-error" : undefined}
                     disabled={loading}
+                    onKeyDown={handleKeyDown}
                     tabIndex={0}
                   />
                 </div>
@@ -170,6 +171,7 @@ const Register = () => {
                     aria-invalid={errors.email ? "true" : "false"}
                     aria-describedby={errors.email ? "email-error" : undefined}
                     disabled={loading}
+                    onKeyDown={handleKeyDown}
                     tabIndex={0}
                   />
                 </div>
@@ -199,6 +201,7 @@ const Register = () => {
                     aria-invalid={errors.password ? "true" : "false"}
                     aria-describedby={errors.password ? "password-error" : undefined}
                     disabled={loading}
+                    onKeyDown={handleKeyDown}
                     tabIndex={0}
                   />
                 </div>

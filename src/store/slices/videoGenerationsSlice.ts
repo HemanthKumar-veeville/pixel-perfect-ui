@@ -112,13 +112,28 @@ const videoGenerationsSlice = createSlice({
       })
       .addCase(fetchVideoGenerations.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || {
-          status: "error",
-          error: {
-            code: "UNKNOWN_ERROR",
-            message: "Failed to fetch video generations",
-          },
-        };
+        // Handle 404 gracefully - endpoint may not exist
+        const error = action.payload as ApiError | any;
+        const is404 = 
+          error?.error?.code === "NOT_FOUND" ||
+          error?.error?.message?.includes("404") ||
+          error?.status === 404 ||
+          (typeof error === "object" && "status" in error && error.status === 404);
+        
+        if (is404) {
+          // Silently handle 404 - endpoint doesn't exist
+          state.error = null;
+          state.records = [];
+          state.pagination = null;
+        } else {
+          state.error = (error as ApiError) || {
+            status: "error",
+            error: {
+              code: "UNKNOWN_ERROR",
+              message: "Failed to fetch video generations",
+            },
+          };
+        }
       });
   },
 });

@@ -1,10 +1,13 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ComingSoonHero } from "@/components/ui/coming-soon-hero";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
 
 const Index = () => {
   return (
     <DashboardLayout>
-      <ComingSoonHero />
+      <div className="space-y-6 sm:space-y-8">
+        {/* Statistics Cards */}
+        <DashboardStats />
+      </div>
     </DashboardLayout>
   );
 };

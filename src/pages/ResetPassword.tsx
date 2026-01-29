@@ -174,6 +174,7 @@ const ResetPassword = () => {
                       aria-invalid={errors.password ? "true" : "false"}
                       aria-describedby={errors.password ? "password-error" : undefined}
                       disabled={loading || !token}
+                      onKeyDown={handleKeyDown}
                       tabIndex={0}
                     />
                   </div>

@@ -120,6 +120,7 @@ const Login = () => {
                     aria-invalid={errors.email ? "true" : "false"}
                     aria-describedby={errors.email ? "email-error" : undefined}
                     disabled={loading}
+                    onKeyDown={handleKeyDown}
                     tabIndex={0}
                   />
                 </div>
