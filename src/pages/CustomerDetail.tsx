@@ -31,11 +31,19 @@ import {
   DollarSign,
   Package,
   TrendingUp,
+  ShoppingCart,
 } from "lucide-react";
 import { customersService } from "@/services/customersService";
+import { cartTrackingService } from "@/services/cartTrackingService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { CustomerRecord, CustomerOrdersResponse, ApiError } from "@/types/api";
+import type {
+  CustomerRecord,
+  CustomerOrdersResponse,
+  ApiError,
+  CartTrackingCustomerResponse,
+  CartTrackingError,
+} from "@/types/api";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -108,6 +116,9 @@ const CustomerDetail = () => {
   const [orders, setOrders] = useState<CustomerOrdersResponse | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<ApiError | null>(null);
+  const [cartEvents, setCartEvents] = useState<CartTrackingCustomerResponse | null>(null);
+  const [cartEventsLoading, setCartEventsLoading] = useState(false);
+  const [cartEventsError, setCartEventsError] = useState<CartTrackingError | null>(null);
 
   useEffect(() => {
     // If customer data wasn't passed via state, we'd need to fetch it
@@ -143,6 +154,34 @@ const CustomerDetail = () => {
 
     if (customerId && storeName) {
       fetchOrders();
+    }
+  }, [customerId, storeName]);
+
+  useEffect(() => {
+    const fetchCartEvents = async () => {
+      if (!customerId || !storeName) return;
+
+      setCartEventsLoading(true);
+      setCartEventsError(null);
+
+      try {
+        const response = await cartTrackingService.getCartEventsByCustomerAndStore(
+          customerId,
+          storeName,
+          { limit: 50, orderBy: "created_at", orderDirection: "DESC" }
+        );
+        setCartEvents(response);
+      } catch (error) {
+        const apiError = error as CartTrackingError;
+        setCartEventsError(apiError);
+        // Don't show toast for cart events errors as it's optional data
+      } finally {
+        setCartEventsLoading(false);
+      }
+    };
+
+    if (customerId && storeName) {
+      fetchCartEvents();
     }
   }, [customerId, storeName]);
 
@@ -316,6 +355,14 @@ const CustomerDetail = () => {
               {customer.totalGenerations > 0 ? (
                 <Badge variant="secondary" className="ml-2">
                   {customer.totalGenerations}
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger value="cart-events">
+              Cart Events
+              {cartEvents?.data?.summary?.eventsCount ? (
+                <Badge variant="secondary" className="ml-2">
+                  {cartEvents.data.summary.eventsCount}
                 </Badge>
               ) : null}
             </TabsTrigger>
@@ -589,6 +636,153 @@ const CustomerDetail = () => {
                     View All Generations
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Cart Events Tab */}
+          <TabsContent value="cart-events" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cart Events</CardTitle>
+                <CardDescription>
+                  Cart tracking events for this customer from this store
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {cartEventsLoading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <Skeleton key={index} className="h-20 w-full" />
+                    ))}
+                  </div>
+                ) : cartEventsError ? (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {cartEventsError?.message?.reason ||
+                        cartEventsError?.error ||
+                        "Failed to load cart events"}
+                    </AlertDescription>
+                  </Alert>
+                ) : !cartEvents?.data?.records ||
+                  cartEvents.data.records.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ShoppingCart className="h-12 w-12 text-muted-foreground opacity-50 mx-auto mb-4" />
+                    <p className="text-sm font-medium">No cart events found</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This customer hasn't triggered any cart events yet
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cartEvents.data.summary && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4 border-b">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Total Events</p>
+                          <p className="text-2xl font-bold">
+                            {cartEvents.data.summary.eventsCount}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Customer ID</p>
+                          <p className="text-sm font-medium font-mono">
+                            {cartEvents.data.summary.customerId}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Store</p>
+                          <p className="text-sm font-medium">
+                            {formatShopName(cartEvents.data.summary.storeName)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Action Type</TableHead>
+                            <TableHead>Product</TableHead>
+                            <TableHead className="hidden md:table-cell">Variant ID</TableHead>
+                            <TableHead className="hidden lg:table-cell">Product URL</TableHead>
+                            <TableHead>Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {cartEvents.data.records.map((event) => (
+                            <TableRow key={event.id}>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs font-medium capitalize"
+                                >
+                                  {event.actionType
+                                    ? event.actionType.replace(/_/g, " ")
+                                    : "N/A"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  {event.productTitle ? (
+                                    <>
+                                      <span className="text-sm font-medium">
+                                        {event.productTitle}
+                                      </span>
+                                      {event.productId && (
+                                        <span className="text-xs text-muted-foreground">
+                                          ID: {event.productId}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : event.productId ? (
+                                    <span className="text-sm text-muted-foreground">
+                                      ID: {event.productId}
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">-</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                <span className="text-sm text-muted-foreground">
+                                  {event.variantId || "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell">
+                                {event.productUrl ? (
+                                  <a
+                                    href={event.productUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline truncate block max-w-xs"
+                                  >
+                                    {event.productUrl}
+                                  </a>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                  {formatDate(event.createdAt)}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {cartEvents.data.pagination?.hasNext && (
+                      <div className="mt-4 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          Showing {cartEvents.data.records.length} of{" "}
+                          {cartEvents.data.pagination.total} events
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

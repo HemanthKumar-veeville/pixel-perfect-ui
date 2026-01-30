@@ -779,3 +779,110 @@ export interface OrderSyncResponse {
   requestId: string;
 }
 
+// Cart Tracking types based on CART_TRACKING_API_SPECS.md
+export type CartActionType = "add_to_cart" | "buy_now" | "remove_from_cart" | string;
+
+export interface CartTrackingEvent {
+  id: string;
+  storeName: string;
+  actionType: string | null;
+  productId: string | null;
+  productTitle: string | null;
+  productUrl: string | null;
+  variantId: string | null;
+  customerId: string | null;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartTrackingTrackRequest {
+  storeName: string;
+  actionType?: string;
+  productId?: string | number;
+  productTitle?: string;
+  productUrl?: string;
+  variantId?: string | number;
+  customerId?: string | number;
+}
+
+export interface CartTrackingTrackResponse {
+  status: "success";
+  message: string;
+  data: {
+    id: string;
+    createdAt: string;
+  };
+}
+
+export interface CartTrackingQueryParams {
+  page?: number;
+  limit?: number;
+  storeName?: string;
+  customerId?: string;
+  actionType?: string;
+  productId?: string;
+  variantId?: string;
+  startDate?: string; // Format: YYYY-MM-DD
+  endDate?: string; // Format: YYYY-MM-DD
+  orderBy?: "created_at" | "updated_at" | "action_type" | "product_id" | "variant_id";
+  orderDirection?: OrderDirection;
+}
+
+export interface CartTrackingPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface CartTrackingSummary {
+  eventsCount: number;
+  customersCount: number;
+  productsCount: number;
+  storesCount: number;
+  actionTypeBreakdown: Record<string, number>;
+}
+
+export interface CartTrackingListResponse {
+  status: "success";
+  message: string;
+  data: {
+    records: CartTrackingEvent[];
+    pagination: CartTrackingPagination;
+    summary: CartTrackingSummary;
+  };
+}
+
+export interface CartTrackingCustomerSummary {
+  customerId: string;
+  storeName: string;
+  eventsCount: number;
+}
+
+export interface CartTrackingCustomerResponse {
+  status: "success";
+  message: string;
+  data: {
+    records: CartTrackingEvent[];
+    pagination: CartTrackingPagination;
+    summary: CartTrackingCustomerSummary;
+  };
+}
+
+export interface CartTrackingError {
+  status: "error";
+  error: string;
+  message: {
+    code: string;
+    field?: string;
+    reason?: string;
+    service?: string;
+    message?: string; // For server errors (500)
+    originalError?: string;
+  };
+}
+

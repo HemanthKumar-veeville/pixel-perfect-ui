@@ -22,6 +22,8 @@ import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import Store from "./pages/Store";
 import Tickets from "./pages/Tickets";
+import CartTracking from "./pages/CartTracking";
+import CartEvents from "./pages/CartEvents";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +128,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Tickets />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cart-tracking"
+            element={
+              <ProtectedRoute>
+                <CartTracking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cart-events"
+            element={
+              <ProtectedRoute>
+                <CartEvents />
               </ProtectedRoute>
             }
           />
