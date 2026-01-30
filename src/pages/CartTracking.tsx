@@ -96,7 +96,7 @@ const CartTracking = () => {
 
       const response = await cartTrackingService.trackCartEvent(payload);
 
-      if (response.status === "success") {
+      if (response.success === true) {
         setSuccess(true);
         toast.success(response.message || "Cart event tracked successfully");
         reset();
@@ -105,8 +105,11 @@ const CartTracking = () => {
     } catch (err) {
       const apiError = err as CartTrackingError;
       const errorMessage =
-        apiError?.message?.reason ||
-        apiError?.message?.message ||
+        (typeof apiError?.message === "object"
+          ? apiError?.message?.reason ||
+            apiError?.message?.message ||
+            apiError?.message?.code
+          : apiError?.message) ||
         apiError?.error ||
         "Failed to track cart event. Please try again.";
       setError(errorMessage);

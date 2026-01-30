@@ -104,7 +104,7 @@ const CartEvents = () => {
 
       try {
         const response = await cartTrackingService.getAllCartEvents(filters);
-        if (response.status === "success") {
+        if (response.success === true) {
           setRecords(response.data.records);
           setPagination(response.data.pagination);
           setSummary(response.data.summary);
@@ -112,12 +112,15 @@ const CartEvents = () => {
       } catch (err) {
         const apiError = err as CartTrackingError;
         setError(apiError);
-        toast.error(
-          apiError?.message?.reason ||
-            apiError?.message?.message ||
-            apiError?.error ||
-            "Failed to fetch cart events"
-        );
+        const errorMessage =
+          (typeof apiError?.message === "object"
+            ? apiError?.message?.reason ||
+              apiError?.message?.message ||
+              apiError?.message?.code
+            : apiError?.message) ||
+          apiError?.error ||
+          "Failed to fetch cart events";
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -605,10 +608,15 @@ const CartEvents = () => {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-sm">
-                    {error?.message?.reason ||
-                      error?.message?.message ||
-                      error?.error ||
-                      "An error occurred while fetching cart events"}
+                    {typeof error?.message === "object"
+                      ? error?.message?.reason ||
+                        error?.message?.message ||
+                        error?.message?.code ||
+                        error?.error ||
+                        "An error occurred while fetching cart events"
+                      : error?.message ||
+                        error?.error ||
+                        "An error occurred while fetching cart events"}
                   </AlertDescription>
                 </Alert>
               )}

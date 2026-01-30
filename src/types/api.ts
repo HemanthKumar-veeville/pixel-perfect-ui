@@ -808,12 +808,13 @@ export interface CartTrackingTrackRequest {
 }
 
 export interface CartTrackingTrackResponse {
-  status: "success";
+  success: true;
   message: string;
   data: {
     id: string;
     createdAt: string;
   };
+  timestamp?: string;
 }
 
 export interface CartTrackingQueryParams {
@@ -848,13 +849,14 @@ export interface CartTrackingSummary {
 }
 
 export interface CartTrackingListResponse {
-  status: "success";
+  success: true;
   message: string;
   data: {
     records: CartTrackingEvent[];
     pagination: CartTrackingPagination;
     summary: CartTrackingSummary;
   };
+  timestamp?: string;
 }
 
 export interface CartTrackingCustomerSummary {
@@ -864,25 +866,27 @@ export interface CartTrackingCustomerSummary {
 }
 
 export interface CartTrackingCustomerResponse {
-  status: "success";
+  success: true;
   message: string;
   data: {
     records: CartTrackingEvent[];
     pagination: CartTrackingPagination;
     summary: CartTrackingCustomerSummary;
   };
+  timestamp?: string;
 }
 
 export interface CartTrackingError {
-  status: "error";
+  success?: false;
+  status?: "error";
   error: string;
   message: {
-    code: string;
+    code?: string;
     field?: string;
     reason?: string;
     service?: string;
     message?: string; // For server errors (500)
     originalError?: string;
-  };
+  } | string;
 }
 
