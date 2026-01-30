@@ -253,6 +253,125 @@ export interface CustomersQueryParams {
   orderDirection?: OrderDirection;
 }
 
+// Customer Orders types based on actual API response
+export interface CustomerOrderMoney {
+  amount: number;
+  currencyCode: string;
+}
+
+export interface CustomerOrderTotals {
+  total: CustomerOrderMoney;
+  subtotal: CustomerOrderMoney;
+  tax: CustomerOrderMoney;
+  shipping: CustomerOrderMoney;
+  discounts: CustomerOrderMoney;
+}
+
+export interface CustomerOrderLineItemVariant {
+  id: string;
+  title: string;
+  sku: string | null;
+  barcode: string | null;
+  price: string;
+  product: {
+    id: string;
+    title: string;
+    handle: string;
+  };
+}
+
+export interface CustomerOrderLineItem {
+  id: string;
+  name: string;
+  quantity: number;
+  originalUnitPrice: CustomerOrderMoney;
+  discountedUnitPrice: CustomerOrderMoney;
+  originalTotal: CustomerOrderMoney;
+  discountedTotal: CustomerOrderMoney;
+  variant: CustomerOrderLineItemVariant | null;
+  product: {
+    id: string;
+    title: string;
+    handle: string;
+  };
+}
+
+export interface CustomerOrderDiscountApplication {
+  code: string;
+  applicable: boolean;
+}
+
+export interface CustomerOrderFulfillmentTrackingInfo {
+  number: string;
+  url: string | null;
+  company: string | null;
+}
+
+export interface CustomerOrderFulfillment {
+  id: string;
+  status: string;
+  trackingInfo: CustomerOrderFulfillmentTrackingInfo[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerOrderTransaction {
+  id: string;
+  kind: string;
+  status: string;
+  amount: number;
+  currencyCode: string;
+  processedAt: string;
+}
+
+export interface CustomerOrder {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  financialStatus: string;
+  fulfillmentStatus: string;
+  cancelled: boolean;
+  cancelReason: string | null;
+  cancelledAt: string | null;
+  closed: boolean;
+  closedAt: string | null;
+  confirmed: boolean;
+  confirmedAt: string | null;
+  test: boolean;
+  totals: CustomerOrderTotals;
+  lineItems: CustomerOrderLineItem[];
+  discountApplications: CustomerOrderDiscountApplication[];
+  fulfillments: CustomerOrderFulfillment[];
+  transactions: CustomerOrderTransaction[];
+}
+
+export interface CustomerOrdersPagination {
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor: string | null;
+  endCursor: string | null;
+}
+
+export interface CustomerOrdersResponse {
+  success: true;
+  data: CustomerOrder[];
+  pagination: CustomerOrdersPagination;
+  requestId: string;
+}
+
+export interface CustomerOrdersQueryParams {
+  limit?: number; // Default: 50, Max: 250
+  after?: string; // Cursor for pagination
+  status?: string;
+  financialStatus?: string;
+  fulfillmentStatus?: string;
+  startDate?: string; // Format: YYYY-MM-DD
+  endDate?: string; // Format: YYYY-MM-DD
+  sortKey?: "CREATED_AT" | "UPDATED_AT" | "PROCESSED_AT" | "TOTAL_PRICE";
+  reverse?: boolean; // Default: true
+}
+
 // Stores Credits types based on API spec
 export interface StoreCreditRecord {
   shopDomain: string;
@@ -485,6 +604,178 @@ export interface ProductSyncResponse {
   success: boolean;
   message: string;
   data: ProductSyncData;
+  requestId: string;
+}
+
+// Orders types based on order_specs.md
+export type OrderFinancialStatus = "paid" | "pending" | "refunded" | "partially_paid" | "partially_refunded" | "voided";
+export type OrderFulfillmentStatus = "fulfilled" | "unfulfilled" | "partial" | "restocked";
+export type OrderStatus = "open" | "closed" | "cancelled";
+
+export interface OrderMoney {
+  amount: number;
+  currencyCode: string;
+}
+
+export interface OrderTotals {
+  total: OrderMoney;
+  subtotal: OrderMoney;
+  tax: OrderMoney;
+  shipping: OrderMoney;
+  discounts: OrderMoney;
+}
+
+export interface OrderLineItemVariant {
+  id: string;
+  title: string;
+  sku: string | null;
+  barcode: string | null;
+  price: string;
+  product: {
+    id: string;
+    title: string;
+    handle: string;
+  };
+}
+
+export interface OrderLineItem {
+  id: string;
+  name: string;
+  quantity: number;
+  originalUnitPrice: OrderMoney;
+  discountedUnitPrice: OrderMoney;
+  originalTotal: OrderMoney;
+  discountedTotal: OrderMoney;
+  variant: OrderLineItemVariant | null;
+  product: {
+    id: string;
+    title: string;
+    handle: string;
+  };
+}
+
+export interface OrderFulfillmentTrackingInfo {
+  number: string;
+  url: string | null;
+  company: string | null;
+}
+
+export interface OrderFulfillment {
+  id: string;
+  status: string;
+  trackingInfo: OrderFulfillmentTrackingInfo[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderTransaction {
+  id: string;
+  kind: string;
+  status: string;
+  amount: number;
+  currencyCode: string;
+  processedAt: string;
+}
+
+export interface OrderRecord {
+  id: number;
+  shopDomain: string;
+  shopifyOrderId: string;
+  orderName: string;
+  orderNumber: number;
+  financialStatus: OrderFinancialStatus;
+  fulfillmentStatus: OrderFulfillmentStatus;
+  orderStatus: OrderStatus;
+  cancelled: boolean;
+  cancelReason: string | null;
+  cancelledAt: string | null;
+  closed: boolean;
+  closedAt: string | null;
+  confirmed: boolean;
+  test: boolean;
+  totals: OrderTotals;
+  lineItems: OrderLineItem[];
+  discountApplications: unknown[];
+  fulfillments: OrderFulfillment[];
+  transactions: OrderTransaction[];
+  customerId: string | null;
+  shopifyCreatedAt: string;
+  shopifyUpdatedAt: string;
+  lastSyncedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrdersPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface OrdersListResponse {
+  success: true;
+  data: OrderRecord[];
+  pagination: OrdersPagination;
+  filters: {
+    shop: string | null;
+    financialStatus: string | null;
+    fulfillmentStatus: string | null;
+    orderStatus: string | null;
+    cancelled: string | null;
+    closed: string | null;
+    confirmed: string | null;
+    test: string | null;
+    customerId: string | null;
+    search: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    dateField: string | null;
+    minTotal: string | null;
+    maxTotal: string | null;
+  };
+  requestId: string;
+}
+
+export interface OrdersQueryParams {
+  shop?: string;
+  financialStatus?: OrderFinancialStatus;
+  fulfillmentStatus?: OrderFulfillmentStatus;
+  orderStatus?: OrderStatus;
+  cancelled?: boolean;
+  closed?: boolean;
+  confirmed?: boolean;
+  test?: boolean;
+  customerId?: string;
+  search?: string;
+  start_date?: string; // Format: YYYY-MM-DD or ISO 8601
+  end_date?: string; // Format: YYYY-MM-DD or ISO 8601
+  dateField?: "created_at" | "updated_at" | "last_synced_at" | "shopify_created_at" | "shopify_updated_at";
+  minTotal?: number;
+  maxTotal?: number;
+  page?: number; // Default: 1
+  limit?: number; // Default: 50, Max: 100
+  orderBy?: "created_at" | "updated_at" | "last_synced_at" | "order_name" | "order_number" | "financial_status" | "fulfillment_status" | "shopify_created_at" | "shopify_updated_at";
+  orderDirection?: OrderDirection;
+}
+
+export interface OrderSyncData {
+  success: boolean;
+  shopDomain: string;
+  totalOrders: number;
+  created: number;
+  updated: number;
+  errors: number;
+  syncType: "full" | "incremental";
+  syncReason: string;
+  requestId: string;
+}
+
+export interface OrderSyncResponse {
+  success: boolean;
+  message: string;
+  data: OrderSyncData;
   requestId: string;
 }
 

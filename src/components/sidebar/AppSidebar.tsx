@@ -7,6 +7,7 @@ import {
   UserCircle,
   Package,
   Ticket,
+  ShoppingBag,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ const adminNavigationItems = [
   { title: "Customers", icon: UserCircle, url: "/customers" },
   { title: "Credits", icon: Coins, url: "/credits" },
   { title: "Products", icon: Package, url: "/products" },
+  { title: "Orders", icon: ShoppingBag, url: "/orders" },
   { title: "Tickets", icon: Ticket, url: "/tickets" },
 ];
 
@@ -38,6 +40,7 @@ const storeNavigationItems = [
   { title: "Store", icon: Store, url: "/store" },
   { title: "Customers", icon: UserCircle, url: "/customers" },
   { title: "Products", icon: Package, url: "/products" },
+  { title: "Orders", icon: ShoppingBag, url: "/orders" },
   { title: "Tickets", icon: Ticket, url: "/tickets" },
 ];
 

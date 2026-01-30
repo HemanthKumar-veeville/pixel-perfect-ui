@@ -17,7 +17,9 @@ import Stores from "./pages/Stores";
 import Credits from "./pages/Credits";
 import CreditsDetail from "./pages/CreditsDetail";
 import Customers from "./pages/Customers";
+import CustomerDetail from "./pages/CustomerDetail";
 import Products from "./pages/Products";
+import Orders from "./pages/Orders";
 import Store from "./pages/Store";
 import Tickets from "./pages/Tickets";
 
@@ -96,10 +98,26 @@ const App = () => (
             }
           />
           <Route
+            path="/customers/:customerId/:customerEmail/:storeName"
+            element={
+              <ProtectedRoute>
+                <CustomerDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/products"
             element={
               <ProtectedRoute>
                 <Products />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <Orders />
               </ProtectedRoute>
             }
           />

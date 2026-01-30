@@ -2,6 +2,8 @@ import { axiosInstance } from "@/lib/axios";
 import type {
   CustomersListResponse,
   CustomersQueryParams,
+  CustomerOrdersResponse,
+  CustomerOrdersQueryParams,
   ApiError,
 } from "@/types/api";
 
@@ -26,6 +28,22 @@ export const customersService = {
 
     try {
       const response = await axiosInstance.get<CustomersListResponse>(url);
+      return response.data;
+    } catch (error) {
+      throw error as ApiError;
+    }
+  },
+
+  getCustomerOrders: async (
+    shopDomain: string,
+    customerId: string,
+    params: CustomerOrdersQueryParams = {}
+  ): Promise<CustomerOrdersResponse> => {
+    const queryString = buildQueryString(params);
+    const url = `/api/stores/${encodeURIComponent(shopDomain)}/customers/${encodeURIComponent(customerId)}/orders${queryString ? `?${queryString}` : ""}`;
+
+    try {
+      const response = await axiosInstance.get<CustomerOrdersResponse>(url);
       return response.data;
     } catch (error) {
       throw error as ApiError;

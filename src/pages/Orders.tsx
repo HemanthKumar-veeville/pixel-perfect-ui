@@ -37,10 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
-  Plus,
   Eye,
-  Edit,
-  Trash2,
   Filter,
   X,
   ChevronLeft,
@@ -49,47 +46,71 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronDown,
-  Package,
   RefreshCw,
   Calendar,
   Search,
   Store,
-  CheckCircle2,
-  Archive,
-  AlertCircle,
   ShoppingBag,
+  DollarSign,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  fetchProducts,
-  syncProducts,
+  fetchOrders,
+  syncOrders,
   setPage,
   setLimit,
   setShop,
-  setStatus,
-  setVendor,
-  setProductType,
+  setFinancialStatus,
+  setFulfillmentStatus,
+  setOrderStatus,
+  setCancelled,
+  setClosed,
+  setConfirmed,
+  setTest,
+  setCustomerId,
   setSearch,
   setDateRange,
-  setInventoryRange,
-  setHasOutOfStock,
+  setTotalRange,
   setSorting,
   resetFilters,
   clearError,
   clearSyncError,
-} from "@/store/slices/productsSlice";
+} from "@/store/slices/ordersSlice";
 import { cn } from "@/lib/utils";
-import type { ProductStatus } from "@/types/api";
+import type { OrderFinancialStatus, OrderFulfillmentStatus, OrderStatus } from "@/types/api";
 import type { ViewMode } from "@/store/slices/viewModeSlice";
 
-const getStatusBadgeStyles = (status: ProductStatus) => {
+const getFinancialStatusBadgeStyles = (status: OrderFinancialStatus) => {
   switch (status) {
-    case "ACTIVE":
+    case "paid":
       return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
-    case "ARCHIVED":
-      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800";
-    case "DRAFT":
+    case "pending":
       return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800";
+    case "refunded":
+    case "partially_refunded":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800";
+    case "partially_paid":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
+    case "voided":
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800";
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800";
+  }
+};
+
+const getFulfillmentStatusBadgeStyles = (status: OrderFulfillmentStatus) => {
+  switch (status) {
+    case "fulfilled":
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
+    case "unfulfilled":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800";
+    case "partial":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
+    case "restocked":
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800";
     default:
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800";
   }
@@ -112,7 +133,14 @@ const formatShopName = (shopDomain: string) => {
   return shopDomain.replace(/\.myshopify\.com$/i, "");
 };
 
-const Products = () => {
+const formatCurrency = (amount: number, currencyCode: string) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currencyCode,
+  }).format(amount);
+};
+
+const Orders = () => {
   const dispatch = useAppDispatch();
   const {
     records,
@@ -122,7 +150,7 @@ const Products = () => {
     filters,
     syncing,
     syncError,
-  } = useAppSelector((state) => state.products);
+  } = useAppSelector((state) => state.orders);
   const { viewMode, selectedStore } = useAppSelector((state) => state.viewMode);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -146,7 +174,7 @@ const Products = () => {
   }, [viewMode, selectedStore, filters.shop, dispatch]);
 
   useEffect(() => {
-    dispatch(fetchProducts(filters));
+    dispatch(fetchOrders(filters));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
@@ -197,7 +225,7 @@ const Products = () => {
 
     try {
       const result = await dispatch(
-        syncProducts({
+        syncOrders({
           shop: syncShop.trim(),
           fullSync,
           autoDetectSyncType: true,
@@ -205,17 +233,17 @@ const Products = () => {
       ).unwrap();
 
       if (result.success) {
-        toast.success(result.message || "Products synced successfully");
+        toast.success(result.message || "Orders synced successfully");
         setSyncDialogOpen(false);
         setSyncShop("");
         setFullSync(false);
-        // Refresh products list
-        dispatch(fetchProducts(filters));
+        // Refresh orders list
+        dispatch(fetchOrders(filters));
       }
     } catch (error) {
       const apiError = error as { error?: { message?: string } };
       toast.error(
-        apiError?.error?.message || "Failed to sync products"
+        apiError?.error?.message || "Failed to sync orders"
       );
     }
   };
@@ -224,16 +252,36 @@ const Products = () => {
     dispatch(setShop(undefined));
   };
 
-  const handleRemoveStatusFilter = () => {
-    dispatch(setStatus(undefined));
+  const handleRemoveFinancialStatusFilter = () => {
+    dispatch(setFinancialStatus(undefined));
   };
 
-  const handleRemoveVendorFilter = () => {
-    dispatch(setVendor(undefined));
+  const handleRemoveFulfillmentStatusFilter = () => {
+    dispatch(setFulfillmentStatus(undefined));
   };
 
-  const handleRemoveProductTypeFilter = () => {
-    dispatch(setProductType(undefined));
+  const handleRemoveOrderStatusFilter = () => {
+    dispatch(setOrderStatus(undefined));
+  };
+
+  const handleRemoveCancelledFilter = () => {
+    dispatch(setCancelled(undefined));
+  };
+
+  const handleRemoveClosedFilter = () => {
+    dispatch(setClosed(undefined));
+  };
+
+  const handleRemoveConfirmedFilter = () => {
+    dispatch(setConfirmed(undefined));
+  };
+
+  const handleRemoveTestFilter = () => {
+    dispatch(setTest(undefined));
+  };
+
+  const handleRemoveCustomerIdFilter = () => {
+    dispatch(setCustomerId(undefined));
   };
 
   const handleRemoveSearchFilter = () => {
@@ -248,72 +296,70 @@ const Products = () => {
     }
   };
 
-  const handleRemoveInventoryFilter = (type: "min" | "max") => {
+  const handleRemoveTotalFilter = (type: "min" | "max") => {
     if (type === "min") {
-      dispatch(setInventoryRange({ minInventory: undefined }));
+      dispatch(setTotalRange({ minTotal: undefined }));
     } else {
-      dispatch(setInventoryRange({ maxInventory: undefined }));
+      dispatch(setTotalRange({ maxTotal: undefined }));
     }
   };
 
-  const handleRemoveHasOutOfStockFilter = () => {
-    dispatch(setHasOutOfStock(undefined));
-  };
-
   const handleView = (id: number) => {
-    console.log("View product:", id);
-  };
-
-  const handleEdit = (id: number) => {
-    console.log("Edit product:", id);
-  };
-
-  const handleDelete = (id: number) => {
-    console.log("Delete product:", id);
+    console.log("View order:", id);
   };
 
   const hasActiveFilters =
     filters.shop ||
-    filters.status ||
-    filters.vendor ||
-    filters.productType ||
+    filters.financialStatus ||
+    filters.fulfillmentStatus ||
+    filters.orderStatus ||
+    filters.cancelled !== undefined ||
+    filters.closed !== undefined ||
+    filters.confirmed !== undefined ||
+    filters.test !== undefined ||
+    filters.customerId ||
     filters.search ||
     filters.start_date ||
     filters.end_date ||
-    filters.minInventory !== undefined ||
-    filters.maxInventory !== undefined ||
-    filters.hasOutOfStock !== undefined;
+    filters.minTotal !== undefined ||
+    filters.maxTotal !== undefined;
 
   const activeFilterCount = [
     filters.shop,
-    filters.status,
-    filters.vendor,
-    filters.productType,
+    filters.financialStatus,
+    filters.fulfillmentStatus,
+    filters.orderStatus,
+    filters.cancelled !== undefined,
+    filters.closed !== undefined,
+    filters.confirmed !== undefined,
+    filters.test !== undefined,
+    filters.customerId,
     filters.search,
     filters.start_date,
     filters.end_date,
-    filters.minInventory !== undefined,
-    filters.maxInventory !== undefined,
-    filters.hasOutOfStock !== undefined,
+    filters.minTotal !== undefined,
+    filters.maxTotal !== undefined,
   ].filter(Boolean).length;
 
   // Calculate summary statistics from records
   const summaryStats = useMemo(() => {
-    const activeCount = records.filter((p) => p.status === "ACTIVE").length;
-    const archivedCount = records.filter((p) => p.status === "ARCHIVED").length;
-    const draftCount = records.filter((p) => p.status === "DRAFT").length;
-    const outOfStockCount = records.filter((p) => p.hasOutOfStockVariants).length;
-    const uniqueStores = new Set(records.map((p) => p.shopDomain)).size;
-    const totalInventory = records.reduce((sum, p) => sum + p.totalInventory, 0);
+    const paidCount = records.filter((o) => o.financialStatus === "paid").length;
+    const pendingCount = records.filter((o) => o.financialStatus === "pending").length;
+    const fulfilledCount = records.filter((o) => o.fulfillmentStatus === "fulfilled").length;
+    const unfulfilledCount = records.filter((o) => o.fulfillmentStatus === "unfulfilled").length;
+    const uniqueStores = new Set(records.map((o) => o.shopDomain)).size;
+    const totalRevenue = records.reduce((sum, o) => sum + o.totals.total.amount, 0);
+    const currencyCode = records[0]?.totals.total.currencyCode || "USD";
 
     return {
       total: pagination?.total || 0,
-      active: activeCount,
-      archived: archivedCount,
-      draft: draftCount,
-      outOfStock: outOfStockCount,
+      paid: paidCount,
+      pending: pendingCount,
+      fulfilled: fulfilledCount,
+      unfulfilled: unfulfilledCount,
       uniqueStores,
-      totalInventory,
+      totalRevenue,
+      currencyCode,
     };
   }, [records, pagination]);
 
@@ -322,14 +368,14 @@ const Products = () => {
       <div className="space-y-4 sm:space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold">Products</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Orders</h1>
           <Button
             onClick={() => setSyncDialogOpen(true)}
             className="gap-2"
             disabled={syncing}
           >
             <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
-            <span className="hidden sm:inline">Sync Products</span>
+            <span className="hidden sm:inline">Sync Orders</span>
             <span className="sm:hidden">Sync</span>
           </Button>
         </div>
@@ -342,15 +388,15 @@ const Products = () => {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Total Products
+                      Total Orders
                     </p>
                     <div className="text-2xl sm:text-3xl font-bold tracking-tight">
                       {summaryStats.total.toLocaleString()}
                     </div>
-                    <p className="text-xs text-muted-foreground">All products</p>
+                    <p className="text-xs text-muted-foreground">All orders</p>
                   </div>
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Package className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                    <ShoppingBag className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -360,15 +406,33 @@ const Products = () => {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Active Products
+                      Paid Orders
                     </p>
                     <div className="text-2xl sm:text-3xl font-bold tracking-tight text-green-700 dark:text-green-300">
-                      {summaryStats.active.toLocaleString()}
+                      {summaryStats.paid.toLocaleString()}
                     </div>
-                    <p className="text-xs text-muted-foreground">Published products</p>
+                    <p className="text-xs text-muted-foreground">Completed payments</p>
                   </div>
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center shrink-0">
                     <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-yellow-500 bg-gradient-to-br from-yellow-50/50 to-amber-50/50 dark:from-yellow-950/30 dark:to-amber-950/30">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Pending Orders
+                    </p>
+                    <div className="text-2xl sm:text-3xl font-bold tracking-tight text-yellow-700 dark:text-yellow-300">
+                      {summaryStats.pending.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Awaiting payment</p>
+                  </div>
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20 flex items-center justify-center shrink-0">
+                    <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-600 dark:text-yellow-400" />
                   </div>
                 </div>
               </CardContent>
@@ -378,33 +442,15 @@ const Products = () => {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Total Stores
+                      Total Revenue
                     </p>
                     <div className="text-2xl sm:text-3xl font-bold tracking-tight text-blue-700 dark:text-blue-300">
-                      {summaryStats.uniqueStores.toLocaleString()}
+                      {formatCurrency(summaryStats.totalRevenue, summaryStats.currencyCode)}
                     </div>
-                    <p className="text-xs text-muted-foreground">Unique shops</p>
+                    <p className="text-xs text-muted-foreground">From all orders</p>
                   </div>
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center shrink-0">
-                    <Store className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/30">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Out of Stock
-                    </p>
-                    <div className="text-2xl sm:text-3xl font-bold tracking-tight text-amber-700 dark:text-amber-300">
-                      {summaryStats.outOfStock.toLocaleString()}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Products with no stock</p>
-                  </div>
-                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center shrink-0">
-                    <AlertCircle className="h-6 w-6 sm:h-7 sm:w-7 text-amber-600 dark:text-amber-400" />
+                    <DollarSign className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
               </CardContent>
@@ -418,11 +464,11 @@ const Products = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <CardTitle className="text-lg sm:text-xl font-semibold">
-                  All Products
+                  All Orders
                 </CardTitle>
                 {pagination && (
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    {pagination.total} total {pagination.total === 1 ? "product" : "products"}
+                    {pagination.total} total {pagination.total === 1 ? "order" : "orders"}
                   </p>
                 )}
               </div>
@@ -490,57 +536,57 @@ const Products = () => {
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
-                  {filters.status && (
+                  {filters.financialStatus && (
                     <Badge
                       variant="secondary"
                       className="gap-1.5 px-3 py-1 text-xs font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
-                      onClick={handleRemoveStatusFilter}
+                      onClick={handleRemoveFinancialStatusFilter}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleRemoveStatusFilter();
+                          handleRemoveFinancialStatusFilter();
                         }
                       }}
                     >
-                      <span className="capitalize">Status: {filters.status}</span>
+                      <span className="capitalize">Financial: {filters.financialStatus.replace(/_/g, " ")}</span>
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
-                  {filters.vendor && (
+                  {filters.fulfillmentStatus && (
                     <Badge
                       variant="secondary"
                       className="gap-1.5 px-3 py-1 text-xs font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
-                      onClick={handleRemoveVendorFilter}
+                      onClick={handleRemoveFulfillmentStatusFilter}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleRemoveVendorFilter();
+                          handleRemoveFulfillmentStatusFilter();
                         }
                       }}
                     >
-                      <span>Vendor: {filters.vendor}</span>
+                      <span className="capitalize">Fulfillment: {filters.fulfillmentStatus}</span>
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
-                  {filters.productType && (
+                  {filters.orderStatus && (
                     <Badge
                       variant="secondary"
                       className="gap-1.5 px-3 py-1 text-xs font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
-                      onClick={handleRemoveProductTypeFilter}
+                      onClick={handleRemoveOrderStatusFilter}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleRemoveProductTypeFilter();
+                          handleRemoveOrderStatusFilter();
                         }
                       }}
                     >
-                      <span>Type: {filters.productType}</span>
+                      <span className="capitalize">Status: {filters.orderStatus}</span>
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
@@ -598,57 +644,39 @@ const Products = () => {
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
-                  {filters.minInventory !== undefined && (
+                  {filters.minTotal !== undefined && (
                     <Badge
                       variant="secondary"
                       className="gap-1.5 px-3 py-1 text-xs font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
-                      onClick={() => handleRemoveInventoryFilter("min")}
+                      onClick={() => handleRemoveTotalFilter("min")}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleRemoveInventoryFilter("min");
+                          handleRemoveTotalFilter("min");
                         }
                       }}
                     >
-                      <span>Min Inventory: {filters.minInventory}</span>
+                      <span>Min Total: {filters.minTotal}</span>
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
-                  {filters.maxInventory !== undefined && (
+                  {filters.maxTotal !== undefined && (
                     <Badge
                       variant="secondary"
                       className="gap-1.5 px-3 py-1 text-xs font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
-                      onClick={() => handleRemoveInventoryFilter("max")}
+                      onClick={() => handleRemoveTotalFilter("max")}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleRemoveInventoryFilter("max");
+                          handleRemoveTotalFilter("max");
                         }
                       }}
                     >
-                      <span>Max Inventory: {filters.maxInventory}</span>
-                      <X className="h-3 w-3" />
-                    </Badge>
-                  )}
-                  {filters.hasOutOfStock !== undefined && (
-                    <Badge
-                      variant="secondary"
-                      className="gap-1.5 px-3 py-1 text-xs font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
-                      onClick={handleRemoveHasOutOfStockFilter}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleRemoveHasOutOfStockFilter();
-                        }
-                      }}
-                    >
-                      <span>Out of Stock: {filters.hasOutOfStock ? "Yes" : "No"}</span>
+                      <span>Max Total: {filters.maxTotal}</span>
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
@@ -668,7 +696,7 @@ const Products = () => {
                         <Input
                           id="search"
                           type="text"
-                          placeholder="Search products..."
+                          placeholder="Search orders..."
                           value={filters.search || ""}
                           onChange={(e) => dispatch(setSearch(e.target.value || undefined))}
                           className="pl-9 h-10"
@@ -693,53 +721,73 @@ const Products = () => {
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="status" className="text-sm font-medium">
-                        Status
+                      <Label htmlFor="financialStatus" className="text-sm font-medium">
+                        Financial Status
                       </Label>
                       <Select
-                        value={filters.status || "all"}
+                        value={filters.financialStatus || "all"}
                         onValueChange={(value) =>
-                          dispatch(setStatus(value === "all" ? undefined : (value as ProductStatus)))
+                          dispatch(setFinancialStatus(value === "all" ? undefined : (value as OrderFinancialStatus)))
                         }
                       >
-                        <SelectTrigger id="status" className="h-10">
+                        <SelectTrigger id="financialStatus" className="h-10">
                           <SelectValue placeholder="All Statuses" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Statuses</SelectItem>
-                          <SelectItem value="ACTIVE">Active</SelectItem>
-                          <SelectItem value="ARCHIVED">Archived</SelectItem>
-                          <SelectItem value="DRAFT">Draft</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="refunded">Refunded</SelectItem>
+                          <SelectItem value="partially_paid">Partially Paid</SelectItem>
+                          <SelectItem value="partially_refunded">Partially Refunded</SelectItem>
+                          <SelectItem value="voided">Voided</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="vendor" className="text-sm font-medium">
-                        Vendor
+                      <Label htmlFor="fulfillmentStatus" className="text-sm font-medium">
+                        Fulfillment Status
                       </Label>
-                      <Input
-                        id="vendor"
-                        type="text"
-                        placeholder="Vendor name"
-                        value={filters.vendor || ""}
-                        onChange={(e) => dispatch(setVendor(e.target.value || undefined))}
-                        className="h-10"
-                      />
+                      <Select
+                        value={filters.fulfillmentStatus || "all"}
+                        onValueChange={(value) =>
+                          dispatch(setFulfillmentStatus(value === "all" ? undefined : (value as OrderFulfillmentStatus)))
+                        }
+                      >
+                        <SelectTrigger id="fulfillmentStatus" className="h-10">
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="fulfilled">Fulfilled</SelectItem>
+                          <SelectItem value="unfulfilled">Unfulfilled</SelectItem>
+                          <SelectItem value="partial">Partial</SelectItem>
+                          <SelectItem value="restocked">Restocked</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="productType" className="text-sm font-medium">
-                        Product Type
+                      <Label htmlFor="orderStatus" className="text-sm font-medium">
+                        Order Status
                       </Label>
-                      <Input
-                        id="productType"
-                        type="text"
-                        placeholder="Product type"
-                        value={filters.productType || ""}
-                        onChange={(e) => dispatch(setProductType(e.target.value || undefined))}
-                        className="h-10"
-                      />
+                      <Select
+                        value={filters.orderStatus || "all"}
+                        onValueChange={(value) =>
+                          dispatch(setOrderStatus(value === "all" ? undefined : (value as OrderStatus)))
+                        }
+                      >
+                        <SelectTrigger id="orderStatus" className="h-10">
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="open">Open</SelectItem>
+                          <SelectItem value="closed">Closed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -807,82 +855,54 @@ const Products = () => {
                           <SelectItem value="created_at">Created At</SelectItem>
                           <SelectItem value="updated_at">Updated At</SelectItem>
                           <SelectItem value="last_synced_at">Last Synced</SelectItem>
+                          <SelectItem value="shopify_created_at">Shopify Created</SelectItem>
                           <SelectItem value="shopify_updated_at">Shopify Updated</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="minInventory" className="text-sm font-medium">
-                        Min Inventory
+                      <Label htmlFor="minTotal" className="text-sm font-medium">
+                        Min Total
                       </Label>
                       <Input
-                        id="minInventory"
+                        id="minTotal"
                         type="number"
                         placeholder="0"
-                        value={filters.minInventory !== undefined ? filters.minInventory : ""}
+                        value={filters.minTotal !== undefined ? filters.minTotal : ""}
                         onChange={(e) =>
                           dispatch(
-                            setInventoryRange({
-                              minInventory: e.target.value ? Number(e.target.value) : undefined,
+                            setTotalRange({
+                              minTotal: e.target.value ? Number(e.target.value) : undefined,
                             })
                           )
                         }
                         className="h-10"
                         min="0"
+                        step="0.01"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="maxInventory" className="text-sm font-medium">
-                        Max Inventory
+                      <Label htmlFor="maxTotal" className="text-sm font-medium">
+                        Max Total
                       </Label>
                       <Input
-                        id="maxInventory"
+                        id="maxTotal"
                         type="number"
                         placeholder="10000"
-                        value={filters.maxInventory !== undefined ? filters.maxInventory : ""}
+                        value={filters.maxTotal !== undefined ? filters.maxTotal : ""}
                         onChange={(e) =>
                           dispatch(
-                            setInventoryRange({
-                              maxInventory: e.target.value ? Number(e.target.value) : undefined,
+                            setTotalRange({
+                              maxTotal: e.target.value ? Number(e.target.value) : undefined,
                             })
                           )
                         }
                         className="h-10"
                         min="0"
+                        step="0.01"
                       />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="hasOutOfStock" className="text-sm font-medium">
-                        Out of Stock
-                      </Label>
-                      <Select
-                        value={
-                          filters.hasOutOfStock === undefined
-                            ? "all"
-                            : filters.hasOutOfStock
-                            ? "true"
-                            : "false"
-                        }
-                        onValueChange={(value) =>
-                          dispatch(
-                            setHasOutOfStock(
-                              value === "all" ? undefined : value === "true"
-                            )
-                          )
-                        }
-                      >
-                        <SelectTrigger id="hasOutOfStock" className="h-10">
-                          <SelectValue placeholder="All" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="true">Yes</SelectItem>
-                          <SelectItem value="false">No</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -911,7 +931,7 @@ const Products = () => {
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription className="text-sm">
-                    {error.error?.message || "An error occurred while fetching products"}
+                    {error.error?.message || "An error occurred while fetching orders"}
                   </AlertDescription>
                 </Alert>
               )}
@@ -925,67 +945,52 @@ const Products = () => {
                         <TableHead className="h-12 font-semibold">
                           <button
                             type="button"
-                            onClick={() => handleColumnSort("title")}
+                            onClick={() => handleColumnSort("order_name")}
                             className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer group"
                           >
-                            Title
-                            {getSortIcon("title")}
+                            Order Name
+                            {getSortIcon("order_name")}
                           </button>
                         </TableHead>
+                        {viewMode === "admin" && (
+                          <TableHead className="h-12 font-semibold">
+                            Shop
+                          </TableHead>
+                        )}
                         <TableHead className="h-12 font-semibold">
-                          Shop
+                          <button
+                            type="button"
+                            onClick={() => handleColumnSort("financial_status")}
+                            className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer group"
+                          >
+                            Financial Status
+                            {getSortIcon("financial_status")}
+                          </button>
                         </TableHead>
                         <TableHead className="h-12 font-semibold">
                           <button
                             type="button"
-                            onClick={() => handleColumnSort("status")}
+                            onClick={() => handleColumnSort("fulfillment_status")}
                             className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer group"
                           >
-                            Status
-                            {getSortIcon("status")}
+                            Fulfillment Status
+                            {getSortIcon("fulfillment_status")}
                           </button>
+                        </TableHead>
+                        <TableHead className="h-12 font-semibold hidden md:table-cell">
+                          Total
+                        </TableHead>
+                        <TableHead className="h-12 font-semibold hidden lg:table-cell">
+                          Items
                         </TableHead>
                         <TableHead className="h-12 font-semibold hidden md:table-cell">
                           <button
                             type="button"
-                            onClick={() => handleColumnSort("vendor")}
+                            onClick={() => handleColumnSort("shopify_created_at")}
                             className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer group"
                           >
-                            Vendor
-                            {getSortIcon("vendor")}
-                          </button>
-                        </TableHead>
-                        <TableHead className="h-12 font-semibold hidden lg:table-cell">
-                          <button
-                            type="button"
-                            onClick={() => handleColumnSort("product_type")}
-                            className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer group"
-                          >
-                            Type
-                            {getSortIcon("product_type")}
-                          </button>
-                        </TableHead>
-                        <TableHead className="h-12 font-semibold hidden sm:table-cell">
-                          <button
-                            type="button"
-                            onClick={() => handleColumnSort("total_inventory")}
-                            className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer group"
-                          >
-                            Inventory
-                            {getSortIcon("total_inventory")}
-                          </button>
-                        </TableHead>
-                        <TableHead className="h-12 font-semibold hidden lg:table-cell">
-                          Price Range
-                        </TableHead>
-                        <TableHead className="h-12 font-semibold hidden md:table-cell">
-                          <button
-                            type="button"
-                            onClick={() => handleColumnSort("last_synced_at")}
-                            className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer group"
-                          >
-                            Last Synced
-                            {getSortIcon("last_synced_at")}
+                            Created At
+                            {getSortIcon("shopify_created_at")}
                           </button>
                         </TableHead>
                         <TableHead className="h-12 font-semibold text-right">Actions</TableHead>
@@ -996,25 +1001,24 @@ const Products = () => {
                         Array.from({ length: 5 }).map((_, index) => (
                           <TableRow key={index} className="hover:bg-transparent">
                             <TableCell>
-                              <Skeleton className="h-4 w-32" />
-                            </TableCell>
-                            <TableCell>
                               <Skeleton className="h-4 w-24" />
                             </TableCell>
+                            {viewMode === "admin" && (
+                              <TableCell>
+                                <Skeleton className="h-4 w-24" />
+                              </TableCell>
+                            )}
                             <TableCell>
-                              <Skeleton className="h-5 w-16 rounded-full" />
+                              <Skeleton className="h-5 w-20 rounded-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-20 rounded-full" />
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
                               <Skeleton className="h-4 w-20" />
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">
-                              <Skeleton className="h-4 w-20" />
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
                               <Skeleton className="h-4 w-16" />
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <Skeleton className="h-4 w-24" />
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
                               <Skeleton className="h-4 w-24" />
@@ -1026,93 +1030,80 @@ const Products = () => {
                         ))
                       ) : records.length === 0 ? (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={9} className="text-center py-12 sm:py-16">
+                          <TableCell colSpan={viewMode === "admin" ? 8 : 7} className="text-center py-12 sm:py-16">
                             <div className="flex flex-col items-center gap-3">
-                              <Package className="h-12 w-12 text-muted-foreground opacity-50" />
+                              <ShoppingBag className="h-12 w-12 text-muted-foreground opacity-50" />
                               <div>
-                                <p className="text-sm font-medium">No products found</p>
+                                <p className="text-sm font-medium">No orders found</p>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Try adjusting your filters or sync products
+                                  Try adjusting your filters or sync orders
                                 </p>
                               </div>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        records.map((product) => (
+                        records.map((order) => (
                           <TableRow
-                            key={product.id}
+                            key={order.id}
                             className="border-b hover:bg-muted/30 transition-colors"
                           >
                             <TableCell className="py-4">
                               <div className="flex flex-col">
-                                <span className="text-sm font-medium">{product.title}</span>
-                                {product.handle && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {product.handle}
-                                  </span>
-                                )}
+                                <span className="text-sm font-medium">{order.orderName}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  #{order.orderNumber}
+                                </span>
                               </div>
                             </TableCell>
+                            {viewMode === "admin" && (
+                              <TableCell className="py-4">
+                                <a
+                                  href={`https://${order.shopDomain}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-medium text-primary hover:underline"
+                                >
+                                  {formatShopName(order.shopDomain)}
+                                </a>
+                              </TableCell>
+                            )}
                             <TableCell className="py-4">
-                              <a
-                                href={`https://${product.shopDomain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm font-medium text-primary hover:underline"
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-xs font-medium",
+                                  getFinancialStatusBadgeStyles(order.financialStatus)
+                                )}
                               >
-                                {formatShopName(product.shopDomain)}
-                              </a>
+                                {order.financialStatus.replace(/_/g, " ").toUpperCase()}
+                              </Badge>
                             </TableCell>
                             <TableCell className="py-4">
                               <Badge
                                 variant="outline"
                                 className={cn(
                                   "text-xs font-medium",
-                                  getStatusBadgeStyles(product.status)
+                                  getFulfillmentStatusBadgeStyles(order.fulfillmentStatus)
                                 )}
                               >
-                                {product.status}
+                                {order.fulfillmentStatus.toUpperCase()}
                               </Badge>
                             </TableCell>
                             <TableCell className="hidden md:table-cell py-4">
-                              <span className="text-sm text-muted-foreground">
-                                {product.vendor || "-"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell py-4">
-                              <span className="text-sm text-muted-foreground">
-                                {product.productType || "-"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell py-4">
                               <span className="text-sm font-medium">
-                                {product.totalInventory}
+                                {formatCurrency(order.totals.total.amount, order.totals.total.currencyCode)}
                               </span>
                             </TableCell>
                             <TableCell className="hidden lg:table-cell py-4">
-                              {product.priceRange ? (
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {product.priceRange.min.currencyCode}{" "}
-                                    {product.priceRange.min.amount}
-                                  </span>
-                                  {product.priceRange.min.amount !==
-                                    product.priceRange.max.amount && (
-                                    <span className="text-xs text-muted-foreground">
-                                      - {product.priceRange.max.currencyCode}{" "}
-                                      {product.priceRange.max.amount}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">-</span>
-                              )}
+                              <span className="text-sm text-muted-foreground">
+                                {order.lineItems.reduce((sum, item) => sum + item.quantity, 0)} items
+                              </span>
                             </TableCell>
                             <TableCell className="hidden md:table-cell py-4">
-                              {product.lastSyncedAt ? (
+                              {order.shopifyCreatedAt ? (
                                 <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                                  {formatDate(product.lastSyncedAt)}
+                                  {formatDate(order.shopifyCreatedAt)}
                                 </span>
                               ) : (
                                 <span className="text-xs text-muted-foreground">-</span>
@@ -1123,10 +1114,10 @@ const Products = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 hover:bg-muted"
-                                onClick={() => handleView(product.id)}
+                                onClick={() => handleView(order.id)}
                               >
                                 <Eye className="h-4 w-4" />
-                                <span className="sr-only">View product</span>
+                                <span className="sr-only">View order</span>
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -1193,9 +1184,9 @@ const Products = () => {
         <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Sync Products</DialogTitle>
+              <DialogTitle>Sync Orders</DialogTitle>
               <DialogDescription>
-                Sync products from a Shopify store. The system will automatically determine
+                Sync orders from a Shopify store. The system will automatically determine
                 whether to perform a full or incremental sync.
               </DialogDescription>
             </DialogHeader>
@@ -1224,13 +1215,13 @@ const Products = () => {
                   className="h-4 w-4 rounded border-gray-300"
                 />
                 <Label htmlFor="fullSync" className="text-sm font-normal cursor-pointer">
-                  Force full sync (sync all products regardless of last sync time)
+                  Force full sync (sync all orders regardless of last sync time)
                 </Label>
               </div>
               {syncError && (
                 <Alert variant="destructive">
                   <AlertDescription className="text-sm">
-                    {syncError.error?.message || "Failed to sync products"}
+                    {syncError.error?.message || "Failed to sync orders"}
                   </AlertDescription>
                 </Alert>
               )}
@@ -1250,7 +1241,7 @@ const Products = () => {
               </Button>
               <Button onClick={handleSync} disabled={syncing || !syncShop.trim()}>
                 <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
-                {syncing ? "Syncing..." : "Sync Products"}
+                {syncing ? "Syncing..." : "Sync Orders"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1260,5 +1251,5 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default Orders;
 

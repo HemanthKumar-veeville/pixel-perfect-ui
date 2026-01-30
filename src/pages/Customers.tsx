@@ -21,12 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -38,8 +32,8 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import {
-  MoreVertical,
   Eye,
   Edit,
   Trash2,
@@ -61,6 +55,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useNavigate } from "react-router-dom";
 import {
   fetchCustomers,
   setPage,
@@ -99,6 +94,7 @@ const formatShopName = (store: string | null | undefined) => {
 
 const Customers = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const {
     records,
     pagination,
@@ -240,7 +236,26 @@ const Customers = () => {
   };
 
   const handleView = (customerId: string | null, customerEmail: string | null, storeName: string) => {
-    console.log("View customer:", customerId, customerEmail, storeName);
+    if (!customerId || !storeName) {
+      toast.error("Customer ID and store name are required");
+      return;
+    }
+
+    // Find the customer record to pass full data
+    const customer = records.find(
+      (c) => c.customerId === customerId && c.storeName === storeName
+    );
+
+    if (customer) {
+      navigate(
+        `/customers/${encodeURIComponent(customerId)}/${encodeURIComponent(customerEmail || "")}/${encodeURIComponent(storeName)}`,
+        {
+          state: { customer },
+        }
+      );
+    } else {
+      toast.error("Customer data not found");
+    }
   };
 
   const handleEdit = (customerId: string | null, customerEmail: string | null, storeName: string) => {
@@ -861,57 +876,21 @@ const Customers = () => {
                               </span>
                             </TableCell>
                             <TableCell className="text-right py-4">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 hover:bg-muted"
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                    <span className="sr-only">Open menu</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleView(
-                                        customer.customerId,
-                                        customer.customerEmail,
-                                        customer.storeName
-                                      )
-                                    }
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleEdit(
-                                        customer.customerId,
-                                        customer.customerEmail,
-                                        customer.storeName
-                                      )
-                                    }
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleDelete(
-                                        customer.customerId,
-                                        customer.customerEmail,
-                                        customer.storeName
-                                      )
-                                    }
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-muted"
+                                onClick={() =>
+                                  handleView(
+                                    customer.customerId,
+                                    customer.customerEmail,
+                                    customer.storeName
+                                  )
+                                }
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span className="sr-only">View customer</span>
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))
