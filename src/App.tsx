@@ -18,11 +18,7 @@ import Credits from "./pages/Credits";
 import CreditsDetail from "./pages/CreditsDetail";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
-import Products from "./pages/Products";
-import Orders from "./pages/Orders";
 import Store from "./pages/Store";
-import Tickets from "./pages/Tickets";
-import CartTracking from "./pages/CartTracking";
 import CartEvents from "./pages/CartEvents";
 
 const queryClient = new QueryClient();
@@ -104,38 +100,6 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <CustomerDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <ProtectedRoute>
-                <Products />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/orders"
-            element={
-              <ProtectedRoute>
-                <Orders />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tickets"
-            element={
-              <ProtectedRoute>
-                <Tickets />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cart-tracking"
-            element={
-              <ProtectedRoute>
-                <CartTracking />
               </ProtectedRoute>
             }
           />

@@ -5,9 +5,6 @@ import {
   Store,
   Coins,
   UserCircle,
-  Package,
-  Ticket,
-  ShoppingBag,
   ShoppingCart,
 } from "lucide-react";
 import {
@@ -29,12 +26,8 @@ const adminNavigationItems = [
   { title: "Generations", icon: Wand2, url: "/generations" },
   { title: "Stores", icon: Store, url: "/stores" },
   { title: "Customers", icon: UserCircle, url: "/customers" },
-  { title: "Credits", icon: Coins, url: "/credits" },
-  { title: "Products", icon: Package, url: "/products" },
-  { title: "Orders", icon: ShoppingBag, url: "/orders" },
   { title: "Cart Events", icon: ShoppingCart, url: "/cart-events" },
-  { title: "Track Cart", icon: ShoppingCart, url: "/cart-tracking" },
-  { title: "Tickets", icon: Ticket, url: "/tickets" },
+  { title: "Credits", icon: Coins, url: "/credits" },
 ];
 
 const storeNavigationItems = [
@@ -42,11 +35,7 @@ const storeNavigationItems = [
   { title: "Generations", icon: Wand2, url: "/generations" },
   { title: "Store", icon: Store, url: "/store" },
   { title: "Customers", icon: UserCircle, url: "/customers" },
-  { title: "Products", icon: Package, url: "/products" },
-  { title: "Orders", icon: ShoppingBag, url: "/orders" },
   { title: "Cart Events", icon: ShoppingCart, url: "/cart-events" },
-  { title: "Track Cart", icon: ShoppingCart, url: "/cart-tracking" },
-  { title: "Tickets", icon: Ticket, url: "/tickets" },
 ];
 
 export function AppSidebar() {

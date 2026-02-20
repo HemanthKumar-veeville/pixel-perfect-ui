@@ -1,30 +1,20 @@
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchStores } from "@/store/slices/storesSlice";
-import { fetchProducts } from "@/store/slices/productsSlice";
-import { fetchCustomers } from "@/store/slices/customersSlice";
-import { fetchImageGenerations } from "@/store/slices/imageGenerationsSlice";
-import { fetchVideoGenerations } from "@/store/slices/videoGenerationsSlice";
-import { fetchStoresCredits } from "@/store/slices/storesCreditsSlice";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Store,
-  Package,
   Users,
   Sparkles,
-  Video,
-  Coins,
   TrendingUp,
-  CheckCircle2,
-  ShoppingBag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { sampleDashboardStats } from "@/data/dashboardSampleData";
 
 interface StatCardProps {
   title: string;
   value: string | number;
   description?: string;
+  change?: number;
+  changeLabel?: string;
   icon: React.ElementType;
   iconColor?: string;
   borderColor?: string;
@@ -36,6 +26,8 @@ const StatCard = ({
   title,
   value,
   description,
+  change,
+  changeLabel = "last 30 days",
   icon: Icon,
   iconColor = "text-primary",
   borderColor = "border-l-primary",
@@ -74,7 +66,18 @@ const StatCard = ({
             <div className="text-2xl sm:text-3xl font-bold tracking-tight">
               {typeof value === "number" ? value.toLocaleString() : value}
             </div>
-            {description && (
+            {change !== undefined && (
+              <div className="flex items-center gap-1">
+                <span className={cn(
+                  "text-xs font-medium",
+                  change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                )}>
+                  {change >= 0 ? "+" : ""}{typeof change === "number" ? change.toLocaleString() : change}
+                </span>
+                <span className="text-xs text-muted-foreground">{changeLabel}</span>
+              </div>
+            )}
+            {description && !change && (
               <p className="text-xs text-muted-foreground">{description}</p>
             )}
           </div>
@@ -86,7 +89,8 @@ const StatCard = ({
               iconColor.includes("green") && "bg-green-500/20",
               iconColor.includes("purple") && "bg-purple-500/20",
               iconColor.includes("orange") && "bg-orange-500/20",
-              iconColor.includes("indigo") && "bg-indigo-500/20"
+              iconColor.includes("red") && "bg-red-500/20",
+              iconColor.includes("yellow") && "bg-yellow-500/20"
             )}
           >
             <Icon
@@ -97,7 +101,8 @@ const StatCard = ({
                 iconColor.includes("green") && "text-green-600 dark:text-green-400",
                 iconColor.includes("purple") && "text-purple-600 dark:text-purple-400",
                 iconColor.includes("orange") && "text-orange-600 dark:text-orange-400",
-                iconColor.includes("indigo") && "text-indigo-600 dark:text-indigo-400"
+                iconColor.includes("red") && "text-red-600 dark:text-red-400",
+                iconColor.includes("yellow") && "text-yellow-600 dark:text-yellow-400"
               )}
             />
           </div>
@@ -108,222 +113,52 @@ const StatCard = ({
 };
 
 export const DashboardStats = () => {
-  const dispatch = useAppDispatch();
-  const { viewMode, selectedStore } = useAppSelector((state) => state.viewMode);
-  const { user } = useAppSelector((state) => state.auth);
-
-  // Store data
-  const {
-    records: stores,
-    pagination: storesPagination,
-    loading: storesLoading,
-  } = useAppSelector((state) => state.stores);
-
-  // Products data
-  const {
-    records: products,
-    pagination: productsPagination,
-    loading: productsLoading,
-  } = useAppSelector((state) => state.products);
-
-  // Customers data
-  const {
-    records: customers,
-    pagination: customersPagination,
-    summary: customersSummary,
-    loading: customersLoading,
-  } = useAppSelector((state) => state.customers);
-
-  // Image Generations data
-  const {
-    records: imageGenerations,
-    pagination: imagePagination,
-    summary: imageSummary,
-    loading: imageLoading,
-  } = useAppSelector((state) => state.imageGenerations);
-
-  // Video Generations data
-  const {
-    records: videoGenerations,
-    pagination: videoPagination,
-    loading: videoLoading,
-  } = useAppSelector((state) => state.videoGenerations);
-
-  // Stores Credits data
-  const {
-    summary: creditsSummary,
-    loading: creditsLoading,
-  } = useAppSelector((state) => state.storesCredits);
-
-  // Fetch data on mount
-  useEffect(() => {
-    // Fetch stores (only in admin view)
-    if (viewMode === "admin") {
-      dispatch(fetchStores({ limit: 1, offset: 0 }));
-    }
-
-    // Fetch products (fetch more to calculate active products)
-    const productFilters: any = { page: 1, limit: 100 };
-    if (viewMode === "store" && selectedStore) {
-      productFilters.shop = selectedStore;
-    }
-    dispatch(fetchProducts(productFilters));
-
-    // Fetch customers
-    const customerFilters: any = { page: 1, limit: 1 };
-    if (viewMode === "store" && selectedStore) {
-      customerFilters.store = selectedStore;
-    }
-    dispatch(fetchCustomers(customerFilters));
-
-    // Fetch image generations
-    const imageFilters: any = { page: 1, limit: 1 };
-    if (viewMode === "store" && selectedStore) {
-      imageFilters.storeName = selectedStore.replace(/\.myshopify\.com$/i, "");
-    }
-    dispatch(fetchImageGenerations(imageFilters));
-
-    // Fetch video generations (handle 404 gracefully if endpoint doesn't exist)
-    // This endpoint may not be available, so we catch errors silently
-    const videoFilters: any = { page: 1, limit: 1 };
-    dispatch(fetchVideoGenerations(videoFilters)).catch(() => {
-      // Silently ignore errors for video generations - endpoint may not exist
-      // The component will handle missing data gracefully
-    });
-
-    // Fetch stores credits (only in admin view)
-    if (viewMode === "admin") {
-      dispatch(fetchStoresCredits({ page: 1, limit: 1 }));
-    }
-  }, [dispatch, viewMode, selectedStore]);
-
-  // Calculate statistics
-  const totalStores = storesPagination?.total || 0;
-  const totalProducts = productsPagination?.total || 0;
-  const totalCustomers = customersSummary?.totalCustomers || customersPagination?.total || 0;
-  const totalImageGenerations = imageSummary?.generationsCount || imagePagination?.total || 0;
-  const totalVideoGenerations = videoPagination?.total || 0;
-  const totalGenerations = totalImageGenerations + totalVideoGenerations;
-  const activeStores = stores.filter((s) => s.isActive).length;
-  const totalCreditBalance = creditsSummary?.totalCreditBalance || 0;
-  const completedGenerations = imageSummary?.statusBreakdown?.completed || 0;
-  const activeProducts = products.filter((p) => p.status === "ACTIVE").length;
-
-  const isLoading =
-    storesLoading ||
-    productsLoading ||
-    customersLoading ||
-    imageLoading ||
-    videoLoading ||
-    creditsLoading;
+  // Using sample data temporarily instead of API calls
+  const stats = sampleDashboardStats;
+  const isLoading = false;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-      {viewMode === "admin" && (
-        <>
-          <StatCard
-            title="Total Stores"
-            value={totalStores}
-            description="All registered stores"
-            icon={Store}
-            iconColor="text-primary"
-            borderColor="border-l-primary"
-            loading={isLoading}
-          />
-          <StatCard
-            title="Active Stores"
-            value={activeStores}
-            description="Currently active"
-            icon={TrendingUp}
-            iconColor="text-green-600 dark:text-green-400"
-            borderColor="border-l-green-500"
-            bgGradient="bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/30 dark:to-emerald-950/30"
-            loading={isLoading}
-          />
-        </>
-      )}
-
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Main Metrics - Available Pages */}
       <StatCard
-        title="Total Products"
-        value={totalProducts}
-        description="All products"
-        icon={Package}
-        iconColor="text-blue-600 dark:text-blue-400"
-        borderColor="border-l-blue-500"
-        bgGradient="bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/30"
+        title="Total Stores"
+        value={stats.totalStores}
+        change={stats.changes.stores}
+        icon={Store}
+        iconColor="text-primary"
+        borderColor="border-l-primary"
         loading={isLoading}
       />
-
       <StatCard
         title="Total Customers"
-        value={totalCustomers}
-        description={customersSummary ? `${customersSummary.storesCount} stores` : "All customers"}
+        value={stats.totalCustomers}
+        change={stats.changes.customers}
         icon={Users}
         iconColor="text-purple-600 dark:text-purple-400"
         borderColor="border-l-purple-500"
         bgGradient="bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-950/30 dark:to-pink-950/30"
         loading={isLoading}
       />
-
       <StatCard
         title="Total Generations"
-        value={totalGenerations}
-        description={`${totalImageGenerations} images, ${totalVideoGenerations} videos`}
+        value={stats.totalGenerations}
+        change={stats.changes.generations}
         icon={Sparkles}
         iconColor="text-orange-600 dark:text-orange-400"
         borderColor="border-l-orange-500"
         bgGradient="bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-950/30 dark:to-amber-950/30"
         loading={isLoading}
       />
-
-      {viewMode === "admin" ? (
-        <>
-          <StatCard
-            title="Completed Generations"
-            value={completedGenerations}
-            description={`${totalGenerations > 0 ? Math.round((completedGenerations / totalGenerations) * 100) : 0}% success rate`}
-            icon={CheckCircle2}
-            iconColor="text-green-600 dark:text-green-400"
-            borderColor="border-l-green-500"
-            bgGradient="bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/30 dark:to-emerald-950/30"
-            loading={isLoading}
-          />
-
-          <StatCard
-            title="Active Products"
-            value={activeProducts}
-            description={`${totalProducts > 0 ? Math.round((activeProducts / totalProducts) * 100) : 0}% of total`}
-            icon={ShoppingBag}
-            iconColor="text-indigo-600 dark:text-indigo-400"
-            borderColor="border-l-indigo-500"
-            bgGradient="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 dark:from-indigo-950/30 dark:to-blue-950/30"
-            loading={isLoading}
-          />
-        </>
-      ) : (
-        <StatCard
-          title="Active Products"
-          value={activeProducts}
-          description={`${totalProducts > 0 ? Math.round((activeProducts / totalProducts) * 100) : 0}% of total`}
-          icon={ShoppingBag}
-          iconColor="text-indigo-600 dark:text-indigo-400"
-          borderColor="border-l-indigo-500"
-          bgGradient="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 dark:from-indigo-950/30 dark:to-blue-950/30"
-          loading={isLoading}
-        />
-      )}
-
-      {viewMode === "admin" && creditsSummary && (
-        <StatCard
-          title="Total Credits"
-          value={totalCreditBalance.toLocaleString()}
-          description="Across all stores"
-          icon={Coins}
-          iconColor="text-primary"
-          borderColor="border-l-primary"
-          loading={isLoading}
-        />
-      )}
+      <StatCard
+        title="Completed Generations"
+        value={stats.completedGenerations}
+        description={`${stats.totalGenerations > 0 ? Math.round((stats.completedGenerations / stats.totalGenerations) * 100) : 0}% success rate`}
+        icon={TrendingUp}
+        iconColor="text-green-600 dark:text-green-400"
+        borderColor="border-l-green-500"
+        bgGradient="bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/30 dark:to-emerald-950/30"
+        loading={isLoading}
+      />
     </div>
   );
 };

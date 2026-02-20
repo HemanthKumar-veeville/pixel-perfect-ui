@@ -78,7 +78,7 @@ const CartEvents = () => {
   const [summary, setSummary] = useState<any>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const [filters, setFilters] = useState<CartTrackingQueryParams>({
+  const [filters, setFilters] = useState<CartTrackingQueryParams & { isTriedOn?: boolean | string }>({
     page: 1,
     limit: 50,
     orderBy: "created_at",
@@ -184,22 +184,20 @@ const CartEvents = () => {
 
   const hasActiveFilters =
     filters.storeName ||
-    filters.customerId ||
     filters.actionType ||
     filters.productId ||
-    filters.variantId ||
+    filters.isTriedOn !== undefined ||
     filters.startDate ||
     filters.endDate;
 
   const activeFilterCount = [
     filters.storeName,
-    filters.customerId,
     filters.actionType,
     filters.productId,
-    filters.variantId,
+    filters.isTriedOn !== undefined ? filters.isTriedOn : null,
     filters.startDate,
     filters.endDate,
-  ].filter(Boolean).length;
+  ].filter((item) => item !== null && item !== undefined).length;
 
   return (
     <DashboardLayout>
@@ -392,6 +390,23 @@ const CartEvents = () => {
                       <X className="h-3 w-3" />
                     </Badge>
                   )}
+                  {filters.isTriedOn !== undefined && (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1.5 px-3 py-1 text-xs font-medium cursor-pointer hover:bg-secondary/80 transition-colors"
+                      onClick={() =>
+                        setFilters((prev) => {
+                          const { isTriedOn, ...rest } = prev;
+                          return rest;
+                        })
+                      }
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <span>Is Tried On: {filters.isTriedOn === true || filters.isTriedOn === "true" ? "Yes" : "No"}</span>
+                      <X className="h-3 w-3" />
+                    </Badge>
+                  )}
                   {filters.startDate && (
                     <Badge
                       variant="secondary"
@@ -482,26 +497,6 @@ const CartEvents = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="customerId" className="text-sm font-medium">
-                        Customer ID
-                      </Label>
-                      <Input
-                        id="customerId"
-                        type="text"
-                        placeholder="456789012"
-                        value={filters.customerId || ""}
-                        onChange={(e) =>
-                          setFilters((prev) => ({
-                            ...prev,
-                            customerId: e.target.value || undefined,
-                            page: 1,
-                          }))
-                        }
-                        className="h-10"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
                       <Label htmlFor="productId" className="text-sm font-medium">
                         Product ID
                       </Label>
@@ -522,23 +517,34 @@ const CartEvents = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="variantId" className="text-sm font-medium">
-                        Variant ID
+                      <Label htmlFor="isTriedOn" className="text-sm font-medium">
+                        Is Tried On
                       </Label>
-                      <Input
-                        id="variantId"
-                        type="text"
-                        placeholder="987654321"
-                        value={filters.variantId || ""}
-                        onChange={(e) =>
+                      <Select
+                        value={
+                          filters.isTriedOn === undefined
+                            ? "all"
+                            : filters.isTriedOn === true || filters.isTriedOn === "true"
+                              ? "true"
+                              : "false"
+                        }
+                        onValueChange={(value) =>
                           setFilters((prev) => ({
                             ...prev,
-                            variantId: e.target.value || undefined,
+                            isTriedOn: value === "all" ? undefined : value === "true",
                             page: 1,
                           }))
                         }
-                        className="h-10"
-                      />
+                      >
+                        <SelectTrigger id="isTriedOn" className="h-10">
+                          <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="true">Yes</SelectItem>
+                          <SelectItem value="false">No</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -642,10 +648,7 @@ const CartEvents = () => {
                         </TableHead>
                         <TableHead className="h-12 font-semibold">Product</TableHead>
                         <TableHead className="h-12 font-semibold hidden md:table-cell">
-                          Variant ID
-                        </TableHead>
-                        <TableHead className="h-12 font-semibold hidden lg:table-cell">
-                          Customer ID
+                          Is Tried On
                         </TableHead>
                         <TableHead className="h-12 font-semibold hidden md:table-cell">
                           <button
@@ -677,9 +680,6 @@ const CartEvents = () => {
                             <TableCell className="hidden md:table-cell">
                               <Skeleton className="h-4 w-20" />
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <Skeleton className="h-4 w-24" />
-                            </TableCell>
                             <TableCell className="hidden md:table-cell">
                               <Skeleton className="h-4 w-24" />
                             </TableCell>
@@ -688,7 +688,7 @@ const CartEvents = () => {
                       ) : records.length === 0 ? (
                         <TableRow className="hover:bg-transparent">
                           <TableCell
-                            colSpan={viewMode === "admin" ? 6 : 5}
+                            colSpan={viewMode === "admin" ? 5 : 4}
                             className="text-center py-12 sm:py-16"
                           >
                             <div className="flex flex-col items-center gap-3">
@@ -753,14 +753,12 @@ const CartEvents = () => {
                               </div>
                             </TableCell>
                             <TableCell className="hidden md:table-cell py-4">
-                              <span className="text-sm text-muted-foreground">
-                                {event.variantId || "-"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell py-4">
-                              <span className="text-sm text-muted-foreground">
-                                {event.customerId || "-"}
-                              </span>
+                              <Badge
+                                variant={event.isTriedOn ? "default" : "secondary"}
+                                className="text-xs font-medium"
+                              >
+                                {event.isTriedOn ? "Yes" : "No"}
+                              </Badge>
                             </TableCell>
                             <TableCell className="hidden md:table-cell py-4">
                               <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
