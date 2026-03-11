@@ -233,12 +233,14 @@ const CartEvents = () => {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Customers
+                      Try-On Customers
                     </p>
                     <div className="text-2xl sm:text-3xl font-bold tracking-tight text-blue-700 dark:text-blue-300">
-                      {summary.customersCount.toLocaleString()}
+                      {summary.triedOnCustomersCount?.toLocaleString() ?? "0"}
                     </div>
-                    <p className="text-xs text-muted-foreground">Unique customers</p>
+                    <p className="text-xs text-muted-foreground">
+                      Customers with at least one try-on
+                    </p>
                   </div>
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
                     <Users className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 dark:text-blue-400" />
