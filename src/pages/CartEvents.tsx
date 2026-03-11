@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import {
   Table,
@@ -251,15 +251,17 @@ const CartEvents = () => {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Products
+                      Tried On
                     </p>
                     <div className="text-2xl sm:text-3xl font-bold tracking-tight text-green-700 dark:text-green-300">
-                      {summary.productsCount.toLocaleString()}
+                      {summary.tryOnGenerationsCount?.toLocaleString() ?? "0"}
                     </div>
-                    <p className="text-xs text-muted-foreground">Unique products</p>
+                    <p className="text-xs text-muted-foreground">
+                      Events marked as tried on
+                    </p>
                   </div>
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
-                    <Package className="h-6 w-6 sm:h-7 sm:w-7 text-green-600 dark:text-green-400" />
+                    <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
               </CardContent>
@@ -269,12 +271,17 @@ const CartEvents = () => {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Stores
+                      Avg Try-On / Customer
                     </p>
                     <div className="text-2xl sm:text-3xl font-bold tracking-tight text-purple-700 dark:text-purple-300">
-                      {summary.storesCount.toLocaleString()}
+                      {summary.averageTryOnPerCustomer !== undefined &&
+                      summary.averageTryOnPerCustomer !== null
+                        ? summary.averageTryOnPerCustomer.toFixed(0)
+                        : "0"}
                     </div>
-                    <p className="text-xs text-muted-foreground">Unique stores</p>
+                    <p className="text-xs text-muted-foreground">
+                      Average try-ons per customer
+                    </p>
                   </div>
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
                     <Store className="h-6 w-6 sm:h-7 sm:w-7 text-purple-600 dark:text-purple-400" />
